@@ -1,74 +1,92 @@
 import { View, Text, StyleSheet, Image, TextInput, ScrollView, TouchableOpacity, Button, Linking, Alert } from "react-native";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-import MapView, { Marker } from 'react-native-maps'; // Importando o MapView
+import MapView, { Marker } from 'react-native-maps';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { UseServicosDatabase } from '../database/UseServicosDataBase'; 
 
 export default function Agendamento() {
     const router = useRouter();
-
     const [dataSelecionada, setDataSelecionada] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [horarioSelecionado, setHorarioSelecionado] = useState("");
+    const [profissionalSelecionada, setProfissionalSelecionada] = useState(null);
+    const [procedimento, setProcedimento] = useState(null);
 
-    const [profissionalSelecionada, setProfissionalSelecionado] = useState(null);
+    useEffect(() => {
+        const carregarProcedimento = async () => {
+            const procedimentoSalvo = await AsyncStorage.getItem('procedimentoSelecionado');
+            if (procedimentoSalvo) {
+                const procedimento = JSON.parse(procedimentoSalvo);
+                const { listar } = UseServicosDatabase(); // Usa a tabela
+                const servicoDetalhado = await listar(procedimento.id); // Busca pelo ID na tabela
+                if (servicoDetalhado) setProcedimento(servicoDetalhado);
+            }
+        };
+        carregarProcedimento();
+    }, []);
+
     const [region, setRegion] = useState({
-        latitude:  -22.58184,
+        latitude: -22.58184,
         longitude: -48.80428, 
         latitudeDelta: 0.0042,
         longitudeDelta: 0.0041,
     });
 
-    const selecionarProfissional = (nome) => {
-        setProfissionalSelecionado(profissionalSelecionada === nome ? null : nome);
+    // Dados de disponibilidade para cada profissional
+    const disponibilidade = {
+        "Mayara Albuquerque": {
+            datas: ["10-11-2024", "2024-11-12", "2024-11-15"],
+            horarios: ["08:00", "10:00", "14:00", "16:00"]
+        },
+        "Laís Castro": {
+            datas: ["2024-11-11", "2024-11-13", "2024-11-18"],
+            horarios: ["09:00", "11:00", "15:00", "17:00"]
+        }
     };
 
-    const horarios = [
-        { id: 1, label: '08:00' },
-        { id: 2, label: '09:00' },
-        { id: 3, label: '10:00' },
-        { id: 4, label: '11:00' },
-        { id: 5, label: '14:00' },
-        { id: 6, label: '15:00' },
-        { id: 7, label: '16:00' },
-        { id: 8, label: '17:00' },
-        { id: 9, label: '18:00' },
-        { id: 10, label: '19:00' },
-    ];
+    const selecionarProfissional = (nome) => {
+        setProfissionalSelecionada(profissionalSelecionada === nome ? null : nome);
+        // Limpa data e horário quando uma nova profissional é selecionada
+        setDataSelecionada(null);
+        setHorarioSelecionado("");
+    };
 
     const onDateChange = (event, selectedDate) => {
         const currentDate = selectedDate || new Date();
         setShowDatePicker(false);
-        setDataSelecionada(currentDate.toLocaleDateString());
+        setDataSelecionada(currentDate.toISOString().split('T')[0]);
     };
 
+    const datasDisponiveis = profissionalSelecionada ? disponibilidade[profissionalSelecionada].datas : [];
+    const horariosDisponiveis = profissionalSelecionada ? disponibilidade[profissionalSelecionada].horarios : [];
 
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.container}>
                 <Image source={require('../../Images/logo.png')} style={styles.logo} />
-                <Text style={styles.titulo}>Tipo de procedimento: </Text>
-                <View style={styles.processo}>
-                    <View>
-                        <Text style={styles.texto2}>Volume Brasileiro</Text>
-                        <View style={styles.infoRow}>
-                            <Icon name="clock-o" size={16} color="#333" style={styles.iconStyle} />
-                            <Text style={styles.texto2}>2h30</Text>
+                {procedimento && (
+                    <>
+                        <Text style={styles.titulo}>Tipo de procedimento: {procedimento.title}</Text>
+                        <View style={styles.processo}>
+                            <View>
+                                <Text style={styles.texto2}>{procedimento.nome}</Text>
+                                <Text style={styles.texto2}>Duração: {procedimento.duracao}</Text>
+                                <Text style={styles.texto2}>Preço: {procedimento.preco}</Text>
+                            </View>
+                            <Image source={procedimento.image} style={styles.volumeBrasil} />
                         </View>
-                        <View style={styles.infoRow}>
-                            <Icon name="money" size={16} color="#333" style={styles.iconStyle} />
-                            <Text style={styles.texto2}>R$ 120.00</Text>
-                        </View>
-                    </View>
-                    <Image source={require('../../Images/brasileiro.png')} style={styles.volumeBrasil} />
-                </View>
+                    </>
+                )}
 
                 <View style={styles.profissional}>
                     <Text style={styles.textoProfissional}>Profissional</Text>
                 </View>
 
+                {/* Seleção de Profissionais */}
                 <TouchableOpacity
                     style={[styles.card, profissionalSelecionada === "Laís Castro" && { opacity: 0.3 }]}
                     onPress={() => selecionarProfissional("Mayara Albuquerque")}
@@ -99,6 +117,7 @@ export default function Agendamento() {
                     </View>
                 </TouchableOpacity>
 
+                {/* Seletor de Data e Horário */}
                 <View>
                     <Text style={styles.texto}>Data</Text>
                     <View>
@@ -116,10 +135,18 @@ export default function Agendamento() {
                                 value={new Date()}
                                 mode="date"
                                 display="default"
-                                onChange={onDateChange}
+                                onChange={(event, selectedDate) => {
+                                    const selectedDateFormatted = selectedDate?.toISOString().split('T')[0];
+                                    if (datasDisponiveis.includes(selectedDateFormatted)) {
+                                        onDateChange(event, selectedDate);
+                                    } else {
+                                        Alert.alert("Data não disponível", "Por favor, selecione uma data disponível.");
+                                    }
+                                }}
                             />
                         )}
                     </View>
+
                     <Text style={styles.texto}>Horário</Text>
                     <View style={styles.horario}>
                         <Picker
@@ -128,27 +155,26 @@ export default function Agendamento() {
                             onValueChange={(itemValue) => setHorarioSelecionado(itemValue)}
                         >
                             <Picker.Item label="Selecione um horário disponível" value="" />
-                            {horarios.map(horario => (
-                                <Picker.Item key={horario.id} label={horario.label} value={horario.label} />
+                            {horariosDisponiveis.map(horario => (
+                                <Picker.Item key={horario} label={horario} value={horario} />
                             ))}
                         </Picker>
                         <Icon name="clock-o" size={20} color="#0B3B60" style={styles.iconStyle} />
                     </View>
                 </View>
 
+
                 <View style={styles.local}>
                     <Text style={styles.textoLocal}>Localização</Text>
                 </View>
 
-
                 <MapView
-    style={styles.map}
-    region={region}
-    scrollEnabled={false} // Desativa a rolagem
->
-    <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} title={"Seu Local"} />
-</MapView>
-
+                    style={styles.map}
+                    region={region}
+                    scrollEnabled={false}
+                >
+                    <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} title={"Seu Local"} />
+                </MapView>
 
                 <TouchableOpacity
                     style={styles.botaoVoltar}
@@ -168,6 +194,7 @@ export default function Agendamento() {
         </ScrollView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {

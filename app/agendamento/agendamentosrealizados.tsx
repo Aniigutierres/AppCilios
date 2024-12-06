@@ -26,6 +26,7 @@ export default function Perfil() {
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.container}>
+                {/* Logo ajustado para ficar bem no topo */}
                 <Image source={require('../../Images/logo.png')} style={styles.logo} />
                 
                 <Text style={styles.titulo}>Agendamentos Ativos:</Text>
@@ -82,9 +83,9 @@ export default function Perfil() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#F9DEFF',
+        // Remover o paddingTop para o logo ficar bem no topo
     },
     titulo: {
         fontSize: 24,
@@ -120,10 +121,9 @@ const styles = StyleSheet.create({
         textAlign: 'left',
     },
     logo: {
-        width: '100%',
-        height: 150,
-        resizeMode: 'contain',
-        marginBottom: 'auto',
+        width: '100%', 
+        height: 140,    
+       
     },
     cancelButton: {
         backgroundColor: '#CD03FF',

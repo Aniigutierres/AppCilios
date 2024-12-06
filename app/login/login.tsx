@@ -1,19 +1,56 @@
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useUsuariosDatabase, UsuarioDatabase } from "../database/UseUsuariosDataBase";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Index() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
+    const [listaUsuario, setListaUsuario] = useState<UsuarioDatabase[]>([]);
 
-    const handleLogin = () => {
+    const { getAll } = useUsuariosDatabase();
+
+    useEffect(() => {
+        const loadUsers = async () => {
+            try {
+                const usuarios = await getAll();
+                setListaUsuario(usuarios);
+            } catch (error) {
+                Alert.alert("Erro", "Falha ao carregar usuários.");
+            }
+        };
+        loadUsers();
+    }, [getAll]);
+
+    const handleLogin = async () => {
+        console.log('Email:', email);
+        console.log('Password:', senha);
+        console.log(listaUsuario);
+
         if (!email || !senha) {
             Alert.alert("Erro", "Por favor, preencha todos os campos.");
-        } else {
-            router.push('../../agendar/agendamento');
+        }  
+        
+        const usuarioEncontrado = listaUsuario.find(usuario => usuario.email === email && usuario.senha === senha);
+
+        if (usuarioEncontrado) {
+            try {
+                await AsyncStorage.setItem('usuarioLogadoId', usuarioEncontrado.id.toString());
+                router.push('../../agendar/agendamento');
+            } catch (error) {
+                Alert.alert("Erro", "Falha ao armazenar informações do usuário.");
+            }
+        }
+        
+        else {
+            Alert.alert("Erro", "Email ou senha incorretos!");
+            
         }
     };
+
+    
 
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -49,7 +86,7 @@ export default function Index() {
                     <Text style={styles.textoEntrar}>Entrar</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => Alert.alert('Recuperação de Senha', 'Instruções para recuperar a senha foram enviadas para o seu email.')}>
                     <Text style={styles.forgotPasswordText}>Esqueci minha senha?</Text>
                 </TouchableOpacity>
 

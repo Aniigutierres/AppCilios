@@ -1,9 +1,12 @@
 import { View, Text, StyleSheet, Image, TextInput, ScrollView, TouchableOpacity, Alert } from "react-native";
-import { useRouter } from "expo-router"; 
+import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useUsuariosDatabase, UsuarioDatabase, } from "../database/UseUsuariosDataBase"; // Ajuste o caminho para onde você salvou o arquivo
 
 export default function Cadastro() {
     const router = useRouter();
+    const [usuarios, setUsuarios] = useState<UsuarioDatabase[]>([])
+    const usuariosControle = useUsuariosDatabase();
     const [nome, setNome] = useState("");
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
@@ -12,10 +15,28 @@ export default function Cadastro() {
     const handleCadastrar = () => {
         if (!nome || !email || !senha || !telefone) {
             Alert.alert("Erro", "Por favor, preencha todos os campos.");
-        } else {
-            router.push('../../agendar/agendamento');
-        }
+        } 
+        const usuarioNovo: Omit<UsuarioDatabase, "id"> = {
+        nome: nome,
+        email: email,
+        senha: senha,
+        telefone: telefone,
+
     };
+
+    console.log(
+        "Nome:", nome,
+        "Email:", email,
+        "Senha:", senha,
+        "Telefone", telefone,
+    );
+    
+    usuariosControle.create(usuarioNovo);
+    Alert.alert("Cadastro Realizado!", "seu cadastro foi realizado com sucesso!!");
+    router.push('../../login/login');
+    };
+
+   
 
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>

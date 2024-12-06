@@ -1,27 +1,58 @@
 import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUsuariosDatabase, UsuarioDatabase } from "../database/UseUsuariosDataBase";
+import { useEffect, useState } from "react";
 
 export default function Perfil() {
+    const [usuario, setUsuario] = useState<UsuarioDatabase | null>(null);
+    const usuariosControle = useUsuariosDatabase();
+
+    useEffect(() => {
+        async function carregarUsuarioLogado() {
+            try {
+                const idUsuarioLogado = await AsyncStorage.getItem('usuarioLogadoId'); // Recupera o ID do AsyncStorage
+                if (idUsuarioLogado) {
+                    const resultado = await usuariosControle.buscaUsuario(parseInt(idUsuarioLogado)); // Usa o ID recuperado
+
+                    if (resultado) {
+                        setUsuario(resultado); // Armazena as informações do usuário encontrado
+                    } else {
+                        console.log("Usuário não encontrado.");
+                    }
+                } else {
+                    console.log("Nenhum usuário logado.");
+                }
+            } catch (error) {
+                console.error("Erro ao carregar usuário logado:", error);
+                Alert.alert("Erro", "Não foi possível carregar as informações do usuário.");
+            }
+        }
+
+        carregarUsuarioLogado();
+    }, []);
 
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.container}>
                 <Image source={require('../../Images/perfil.png')} style={styles.img} />
                 <View style={styles.card}>
-                        <View style={styles.cardContent}>
-               <Text style={styles.texto3}>Valentina Lima Ferrão</Text>
-                <Text style={styles.texto3}>Valen.Lima343@gmail.com</Text>
-                            </View>
-                        </View>
-                        <Image source={require('../../Images/Borboleta.png')} style={styles.img} />
+                    <View style={styles.cardContent}>
+                        {usuario ? (
+                            <>
+                                <Text style={styles.texto3}>{usuario.nome}</Text>
+                                <Text style={styles.texto3}>{usuario.email}</Text>
+                            </>
+                        ) : (
+                            <Text>Carregando informações do usuário...</Text>
+                        )}
                     </View>
-             
-                
-
-           
-
+                </View>
+                <Image source={require('../../Images/Borboleta.png')} style={styles.img} />
+            </View>
         </ScrollView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
